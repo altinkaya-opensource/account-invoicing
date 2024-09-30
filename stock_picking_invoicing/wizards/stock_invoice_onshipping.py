@@ -35,8 +35,12 @@ class StockInvoiceOnshipping(models.TransientModel):
         active_ids = self.env.context.get('active_ids', [])
         if active_ids:
             active_ids = active_ids[0]
-        pick_obj = self.env['stock.picking']
-        picking = pick_obj.browse(active_ids)
+
+        if self.env.context.get('active_model') == 'stock.ewaybill':
+            picking = self.env['stock.ewaybill'].browse(active_ids).picking_ids
+        else:
+            pick_obj = self.env['stock.picking']
+            picking = pick_obj.browse(active_ids)
         if not picking or not picking.move_lines:
             return 'sale'
         pick_type_code = picking.picking_type_id.code
@@ -61,7 +65,7 @@ class StockInvoiceOnshipping(models.TransientModel):
             ('partner', 'Partner'),
             ('partner_product', 'Partner/Product'),
         ],
-        default="picking",
+        default="partner",
         help="Group pickings/moves to create invoice(s):\n"
              "Picking: One invoice per picking;\n"
              "Partner: One invoice for each picking's partner;\n"
@@ -84,6 +88,9 @@ class StockInvoiceOnshipping(models.TransientModel):
     )
     show_sale_journal = fields.Boolean()
     show_purchase_journal = fields.Boolean()
+    connect_to_einvoice = fields.Boolean(string='Connect to e-invoice')
+    partner_id = fields.Many2one('res.partner', string='Partner', readonly=True)
+    supplier_invoice_id = fields.Many2one('account.invoice', string='Supplier Invoice')
 
     @api.model
     def default_get(self, fields_list):
@@ -93,9 +100,14 @@ class StockInvoiceOnshipping(models.TransientModel):
         :return: dict
         """
         result = super(StockInvoiceOnshipping, self).default_get(fields_list)
-        result.update({
-            'invoice_date': fields.Date.today(),
-        })
+        result.update({'invoice_date': fields.Date.today()})
+        pickings = self._load_pickings()
+        if pickings and 'customer' not in pickings.mapped('location_dest_id.usage'):
+            partner_id = pickings.mapped('partner_id')
+            if len(partner_id) > 1:
+                raise UserError(_('You can only invoice one partner'))
+            result.update({'partner_id': partner_id.id})
+
         return result
 
     @api.onchange('group')
@@ -117,9 +129,7 @@ class StockInvoiceOnshipping(models.TransientModel):
             moves = lines.filtered(lambda x: x.location_dest_id.usage == usage)
         else:
             moves = lines.filtered(lambda x: x.location_id.usage == usage)
-        total = sum([
-            (m._get_price_unit_invoice(inv_type, m.picking_id.partner_id) *
-             m.product_uom_qty) for m in moves])
+        total = sum([m._get_price_unit_invoice() for m in moves])
         return total, moves.mapped('picking_id')
 
     @api.multi
@@ -198,7 +208,10 @@ class StockInvoiceOnshipping(models.TransientModel):
         :return:
         """
         self.ensure_one()
-        invoices = self._action_generate_invoices()
+        if self.connect_to_einvoice and self.journal_type == 'purchase':
+            invoices = self._action_connect_supplier_einvoice()
+        else:
+            invoices = self._action_generate_invoices()
         if not invoices:
             raise UserError(_('No invoice created!'))
 
@@ -237,10 +250,19 @@ class StockInvoiceOnshipping(models.TransientModel):
         Load pickings from context
         :return: stock.picking recordset
         """
-        picking_obj = self.env['stock.picking']
-        active_ids = self.env.context.get('active_ids', [])
-        pickings = picking_obj.browse(active_ids)
-        pickings = pickings.filtered(lambda p: p.invoice_state == '2binvoiced')
+        if self.env.context.get('active_model') == 'stock.ewaybill':
+            waybill_obj = self.env['stock.ewaybill'].browse(self.env.context.get('active_ids', []))
+            pickings = waybill_obj.picking_ids
+            if not pickings:
+                raise UserError(_('No picking found! Match the waybill with a picking before creating the invoice.'))
+            pickings = pickings.filtered(lambda p: p.invoice_state == '2binvoiced')
+            return pickings
+        else:
+            picking_obj = self.env['stock.picking']
+            active_ids = self.env.context.get('active_ids', [])
+            pickings = picking_obj.browse(active_ids)
+            # pickings._set_as_2binvoiced() todo: check if this is needed
+            pickings = pickings.filtered(lambda p: p.invoice_state == '2binvoiced')
         return pickings
 
     @api.multi
@@ -265,13 +287,35 @@ class StockInvoiceOnshipping(models.TransientModel):
         active_ids = self.env.context.get('active_ids', [])
         if active_ids:
             active_ids = active_ids[0]
-        picking = self.env['stock.picking'].browse(active_ids)
+        if self.env.context.get('active_model') == 'stock.ewaybill':
+            picking = self.env['stock.ewaybill'].browse(active_ids).picking_ids
+        else:
+            pick_obj = self.env['stock.picking']
+            picking = pick_obj.browse(active_ids)
 
         inv_type = INVOICE_TYPE_MAP.get((
             picking.picking_type_code, picking.location_id.usage,
             picking.location_dest_id.usage)) or 'out_invoice'
 
         return inv_type
+
+    @api.multi
+    def _get_reference(self):
+        """
+        Get invoice reference
+        :return: str
+        """
+        self.ensure_one()
+
+        active_ids = self.env.context.get('active_ids', [])
+        if active_ids:
+            active_ids = active_ids[0]
+        picking = self.env['stock.picking'].browse(active_ids)
+        if self.journal_type == 'sale':
+            reference = picking.sale_id.client_order_ref
+        else:
+            reference = False
+        return reference
 
     @api.model
     def _get_picking_key(self, picking):
@@ -332,32 +376,42 @@ class StockInvoiceOnshipping(models.TransientModel):
         """
         picking = fields.first(pickings)
         partner_id = picking._get_partner_to_invoice()
-        partner = self.env['res.partner'].browse(partner_id)
+        partner_shipping_id = picking.partner_id
+        partner = partner_id
         inv_type = self._get_invoice_type()
         if inv_type in ('out_invoice', 'out_refund'):
             account_id = partner.property_account_receivable_id.id
-            payment_term = partner.property_payment_term_id.id
+            payment_term = picking.sale_id.payment_term_id.id or partner.property_payment_term_id.id
         else:
             account_id = partner.property_account_payable_id.id
-            payment_term = partner.property_supplier_payment_term_id.id
+            payment_term = picking.sale_id.payment_term_id.id or partner.property_supplier_payment_term_id.id
         company = self.env.user.company_id
         currency = company.currency_id
-        if partner:
-            code = picking.picking_type_id.code
-            if partner.property_product_pricelist and code == 'outgoing':
-                currency = partner.property_product_pricelist.currency_id
+        if inv_type == 'out_invoice':
+            currency = picking.sale_id.pricelist_id.currency_id or partner.property_product_pricelist.currency_id or company.currency_id
+        elif inv_type == 'out_refund':
+            currency = picking.purchase_id.currency_id or company.currency_id
         journal = self._get_journal()
         invoice_obj = self.env['account.invoice']
         values = invoice_obj.default_get(invoice_obj.fields_get().keys())
+        reference = self._get_reference()
         values.update({
             'origin': ", ".join(pickings.mapped("name")),
-            'user_id': self.env.user.id,
+            'user_id': picking.sales_uid.id,
             'partner_id': partner_id,
             'account_id': account_id,
             'payment_term_id': payment_term,
             'type': inv_type,
-            'fiscal_position_id': partner.property_account_position_id.id,
+            'reference': reference,
+            'address_contact_id': partner_shipping_id,
+            'fiscal_position_id': picking.sale_id.fiscal_position_id.id or partner.property_account_position_id.id,
+            'pricelist_id': picking.sale_id.pricelist_id.id or False,
+            'partner_shipping_id': partner_shipping_id,
+            'comment': picking.note,
             'company_id': company.id,
+            'incoterm_id': picking.sale_id.incoterm.id,
+            'carrier_id': picking.carrier_id.id,
+            'delivery_ref_no': picking.carrier_tracking_ref or False,
             'currency_id': currency.id,
             'journal_id': journal.id,
             'picking_ids': [(4, p.id, False) for p in pickings],
@@ -445,6 +499,7 @@ class StockInvoiceOnshipping(models.TransientModel):
         move_line_ids = []
         for move in moves:
             qty = move.product_uom_qty
+            sale_name = move.sale_line_id.name
             loc = move.location_id
             loc_dst = move.location_dest_id
             # Better to understand with IF/ELIF than many OR
@@ -459,24 +514,30 @@ class StockInvoiceOnshipping(models.TransientModel):
             quantity += qty
             move_line_ids.append((4, move.id, False))
         taxes = moves._get_taxes(fiscal_position, inv_type)
-        price = moves._get_price_unit_invoice(
-            inv_type, partner_id, quantity)
+        price = moves._get_price_unit_invoice()
+        partner_order_ref = moves._get_partner_order_ref()
+        moves_picking_ref = moves._get_picking_ref()
         line_obj = self.env['account.invoice.line']
         values = line_obj.default_get(line_obj.fields_get().keys())
         values.update({
-            'name': name,
+            'name': sale_name or name,
             'account_id': account.id,
             'product_id': product.id,
             'uom_id': product.uom_id.id,
+            'lot_ids': [(4, lot.id) for lot in move.move_line_ids.mapped('lot_id')],
             'quantity': quantity,
+            'partner_order_ref': partner_order_ref,
+            'moves_picking_ref': moves_picking_ref,
+            'discount': moves.sale_line_id.discount or False,
             'price_unit': price,
+            'sale_line_ids': [(6, 0, moves.sale_line_id.ids)],
             'invoice_line_tax_ids': [(6, 0, taxes.ids)],
             'move_line_ids': move_line_ids,
             'invoice_id': invoice.id,
         })
 
         values = self._simulate_invoice_line_onchange(values, price_unit=price)
-        values.update({'name': name})
+        values.update({'name': sale_name or name})
         return values
 
     @api.multi
@@ -504,6 +565,105 @@ class StockInvoiceOnshipping(models.TransientModel):
         """
         return self.env['account.invoice'].create(invoice_values)
 
+    def _action_connect_supplier_einvoice(self):
+        """
+        Connect to supplier einvoice
+        :return: action.invoice recordset
+        """
+        AccountInvoiceLine = self.env['account.invoice.line']
+        invoice = self.supplier_invoice_id
+        pickings = self._load_pickings()
+
+        if not invoice:
+            raise UserError(_('You must select a supplier invoice'))
+
+        if not invoice.invoice_line_ids:
+            invoice.action_import_lines_from_einvoice_xml()
+
+        # Link pickings with invoice
+        invoice.write({
+            'picking_ids': [(6, 0, [p.id for p in pickings])],
+        })
+        invoice_lines = invoice.invoice_line_ids
+
+        for picking in pickings:
+            moves = picking.mapped("move_lines")
+            for move in moves:
+                invoice_line = invoice_lines.filtered(lambda l: l.product_id == move.product_id)
+
+                if not invoice_line:
+                    invoice_line = AccountInvoiceLine.create(self._prepare_purchase_invoice_line(picking, move,
+                                                                                                 invoice))
+                    invoice.write({
+                        'invoice_line_ids': [(4, invoice_line.id)]
+                    })
+
+                purchase_line = move.purchase_line_id
+                # Link Invoice Lines with Move and Purchase Line
+                invoice_line.write({
+                    'purchase_id': picking.purchase_id.id,
+                    'purchase_line_id': purchase_line.id,
+                    # this field named wrong. it's related to stock.move, not stock.move.line
+                    'move_line_ids': [(4, move.id)],
+                })
+                # Link Purchase Line with Invoice Lines
+                if purchase_line:
+                    purchase_line.write({
+                        'invoice_lines': [(6, 0, invoice_line.ids)],
+                    })
+                # Link Move with Invoice Lines
+                move.write({
+                    'invoice_line_ids': [
+                        (6, 0, invoice_line.ids)],
+                })
+
+        return invoice
+
+    def _prepare_purchase_invoice_line(self, picking, move, invoice):
+        """
+        Prepare invoice line
+        :param picking: stock.picking recordset
+        :param move: stock.move recordset
+        :param invoice: account.invoice recordset
+        :return: values: dict
+        """
+        line_obj = self.env['account.invoice.line']
+        product = move.product_id
+        categ = product.categ_id
+        taxes = move._get_taxes(invoice.fiscal_position_id, invoice.type)
+        partner_order_ref = move._get_partner_order_ref()
+        moves_picking_ref = move._get_picking_ref()
+        purchase_line = move.purchase_line_id
+        if invoice.type in ('out_invoice', 'out_refund'):
+            account = product.property_account_income_id
+            if not account:
+                account = categ.property_account_income_categ_id
+        else:
+            account = product.property_account_expense_id
+            if not account:
+                account = categ.property_account_expense_categ_id
+        account = move._get_account(invoice.fiscal_position_id, account)
+        price = purchase_line.price_unit
+        values = line_obj.default_get(line_obj.fields_get().keys())
+        values.update({
+            'name': move.name,
+            'account_id': account.id,
+            'product_id': product.id,
+            'uom_id': product.uom_id.id,
+            'lot_ids': [(4, lot.id) for lot in move.move_line_ids.mapped('lot_id')],
+            'quantity': move.product_uom_qty,
+            'partner_order_ref': partner_order_ref,
+            'moves_picking_ref': moves_picking_ref,
+            'price_unit': price,
+            'purchase_line_ids': [(6, 0, purchase_line.ids)],
+            'invoice_line_tax_ids': [(6, 0, taxes.ids)],
+            'move_line_ids': [(4, move.id)],
+            'invoice_id': invoice.id,
+        })
+        values = self._simulate_invoice_line_onchange(values, price_unit=price)
+        values.update({'name': move.name})
+        return values
+
     def _action_generate_invoices(self):
         """
         Action to generate invoices based on pickings
@@ -516,6 +676,10 @@ class StockInvoiceOnshipping(models.TransientModel):
         pick_list = self._group_pickings(pickings)
         invoices = self.env['account.invoice'].browse()
         for pickings in pick_list:
+            if True in pickings.mapped('sale_id.create_ewaybill_within_invoice'):
+                pickings.filtered(lambda p:
+                                  p.ewaybill_id == False and p.sale_id.create_ewaybill_within_invoice). \
+                    _create_ewaybill_before_invoice(ewaybill_date=self.invoice_date)
             moves = pickings.mapped("move_lines")
             grouped_moves_list = self._group_moves(moves)
             parts = self.ungroup_moves(grouped_moves_list)
@@ -537,5 +701,8 @@ class StockInvoiceOnshipping(models.TransientModel):
                     invoice = self._create_invoice(invoice_values)
                     invoice._onchange_invoice_line_ids()
                     invoice.compute_taxes()
+                    for move in moves_list:
+                        if move.sale_line_id:
+                            move.sale_line_id.invoice_lines = move.invoice_line_ids
                     invoices |= invoice
         return invoices

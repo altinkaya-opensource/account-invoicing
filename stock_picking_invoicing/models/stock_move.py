@@ -40,32 +40,70 @@ class StockMove(models.Model):
         """
         return fiscal_position.map_account(account)
 
+    @api.model
+    def _get_partner_order_ref(self):
+        """
+        Gets partner order reference
+        :return: string
+        """
+        count = 0
+        if self.sale_line_id:
+            order_id = self.sale_line_id.order_id
+            for line in order_id.order_line:
+                count += 1
+                if line == self.sale_line_id:
+                    return "%s-%s" % (order_id.client_order_ref or order_id.name, str(count))
+
+        elif self.purchase_line_id:
+            purchase_id = self.purchase_line_id.order_id
+            for line in purchase_id.order_line:
+                count += 1
+                if line == self.purchase_line_id:
+                    return "%s-%s" % (purchase_id.name, str(count))
+
+        else:
+            return self.picking_id.name
+
+    @api.model
+    def _get_picking_ref(self):
+        """
+        Gets picking reference
+        :return: string
+        """
+        return self.picking_id.document_number or self.picking_id.name
+
     @api.multi
-    def _get_price_unit_invoice(self, inv_type, partner, qty=1):
+    def _get_price_unit_invoice(self):
         """
         Gets price unit for invoice
-        :param inv_type: str
-        :param partner: res.partner
-        :param qty: float
         :return: float
         """
+
         product = self.mapped("product_id")
         product.ensure_one()
-        if inv_type in ('in_invoice', 'in_refund'):
-            result = product.price
+
+        if self.sale_line_id:
+            return self.sale_line_id.price_unit
+        if self.purchase_line_id:
+            return self.purchase_line_id.price_unit
         else:
-            # If partner given, search price in its sale pricelist
-            if partner and partner.property_product_pricelist:
-                product = product.with_context(
-                    partner=partner.id,
-                    quantity=qty,
-                    pricelist=partner.property_product_pricelist.id,
-                    uom=fields.first(self).product_uom.id
-                )
-                result = product.price
-            else:
-                result = product.lst_price
-        return result
+            return 0.0
+
+        # if inv_type in ('in_invoice', 'in_refund'):
+        #     result = product.price
+        # else:
+        #     # If partner given, search price in its sale pricelist
+        #     if partner and partner.property_product_pricelist:
+        #         product = product.with_context(
+        #             partner=partner.id,
+        #             quantity=qty,
+        #             pricelist=partner.property_product_pricelist.id,
+        #             uom=fields.first(self).product_uom.id
+        #         )
+        #         result = product.price
+        #     else:
+        #         result = product.lst_price
+        # return result
 
     def _prepare_extra_move_vals(self, qty):
         """Copy invoice state for a new extra stock move"""

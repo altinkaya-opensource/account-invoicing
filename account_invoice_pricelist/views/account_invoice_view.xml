@@ -5,14 +5,14 @@
         <field name="model">account.invoice</field>
         <field name="inherit_id" ref="account.invoice_form"/>
         <field name="arch" type="xml">
-            <button name="action_invoice_open" position="before">
+         <!--   <button name="action_invoice_open" position="before">
                 <button type="object"
                         name="button_update_prices_from_pricelist"
                         string="Update prices"
                         attrs="{'invisible': ['|', ('pricelist_id', '=', False), ('state', 'not in', ['draft'])]}"
                         help="Update price in lines from the pricelist"
                 />
-            </button>
+            </button>  -->
             <field name="user_id" position="after">
                 <field name="pricelist_id"/>
             </field>

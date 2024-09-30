@@ -4,7 +4,7 @@
     'name': "Stock Picking Invoicing",
     'version': '12.0.3.1.0',
     'category': 'Warehouse Management',
-    'author': "Agile Business Group,Odoo Community Association (OCA)",
+    'author': "Yigit Budak,Agile Business Group,Odoo Community Association (OCA)",
     'website': 'https://github.com/OCA/account-invoicing',
     'license': 'AGPL-3',
     "depends": [
@@ -18,6 +18,7 @@
         "views/stock_move.xml",
         "views/stock_picking.xml",
         "views/stock_picking_type.xml",
+        'views/account_invoice.xml'
     ],
     "demo": [
         "demo/stock_picking_demo.xml"

@@ -41,8 +41,7 @@ class StockPicking(models.Model):
     @api.multi
     def _get_partner_to_invoice(self):
         self.ensure_one()
-        partner = self.partner_id
-        return partner.address_get(['invoice']).get('invoice')
+        return self.sale_id.partner_invoice_id
 
     @api.multi
     def action_assign(self):
@@ -51,3 +50,11 @@ class StockPicking(models.Model):
                 for m in self.mapped('move_lines')):
             self.write({'invoice_state': '2binvoiced'})
         return super().action_assign()
+
+    @api.multi
+    def button_validate(self):
+        for picking in self.filtered(lambda p:
+                                     p.picking_type_id.code not in ['internal',
+                                                                    'mrp_operation']):
+            picking.set_to_be_invoiced()
+        return super(StockPicking, self).button_validate()

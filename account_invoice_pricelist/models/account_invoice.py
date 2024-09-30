@@ -56,10 +56,7 @@ class AccountInvoiceLine(models.Model):
             fiscal_position=(
                 self.invoice_id.partner_id.property_account_position_id.id)
         )
-        tax_obj = self.env['account.tax']
-        self.price_unit = tax_obj._fix_tax_included_price_company(
-            product.price, product.taxes_id, self.invoice_line_tax_ids,
-            self.company_id)
+        self.price_unit = product.price
 
     @api.onchange('uom_id')
     def _onchange_uom_id(self):
