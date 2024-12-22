@@ -51,6 +51,7 @@ setuptools.setup(
         'odoo-addon-account_menu_invoice_refund>=16.0dev,<16.1dev',
         'odoo-addon-account_move_auto_post_ref>=16.0dev,<16.1dev',
         'odoo-addon-account_move_cancel_confirm>=16.0dev,<16.1dev',
+        'odoo-addon-account_move_sent_usability>=16.0dev,<16.1dev',
         'odoo-addon-account_move_substate>=16.0dev,<16.1dev',
         'odoo-addon-account_move_tier_validation>=16.0dev,<16.1dev',
         'odoo-addon-account_receipt_journal>=16.0dev,<16.1dev',
