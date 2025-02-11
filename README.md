@@ -89,6 +89,7 @@ addon | version | maintainers | summary
 [sale_order_invoicing_grouping_criteria](sale_order_invoicing_grouping_criteria/) | 16.0.1.0.0 | [![pedrobaeza](https://github.com/pedrobaeza.png?size=30px)](https://github.com/pedrobaeza) | Sales order invoicing grouping criteria
 [sale_order_invoicing_qty_percentage](sale_order_invoicing_qty_percentage/) | 16.0.1.0.0 | [![pedrobaeza](https://github.com/pedrobaeza.png?size=30px)](https://github.com/pedrobaeza) | Sales order invoicing by percentage of the quantity
 [sale_order_invoicing_queued](sale_order_invoicing_queued/) | 16.0.1.0.0 |  | Enqueue sales order invoicing
+[sale_stock_picking_invoicing](sale_stock_picking_invoicing/) | 16.0.1.0.0 | [![mbcosta](https://github.com/mbcosta.png?size=30px)](https://github.com/mbcosta) [![renatonlima](https://github.com/renatonlima.png?size=30px)](https://github.com/renatonlima) | Sales Stock Picking Invocing
 [sale_timesheet_invoice_description](sale_timesheet_invoice_description/) | 16.0.1.0.0 |  | Add timesheet details in invoice line
 [stock_account_move_reset_to_draft](stock_account_move_reset_to_draft/) | 16.0.1.0.1 | [![victoralmau](https://github.com/victoralmau.png?size=30px)](https://github.com/victoralmau) | Stock account move reset to draft
 [stock_picking_invoicing](stock_picking_invoicing/) | 16.0.1.0.1 |  | Stock Picking Invoicing
