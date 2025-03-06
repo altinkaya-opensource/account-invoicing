@@ -12,124 +12,77 @@ class StockMove(models.Model):
         "stock.invoice.state.mixin",
     ]
 
-    def _get_price_unit_invoice(self, inv_type, partner, qty=1):
+    def _get_taxes(self, fiscal_position, inv_type):
+        """
+        Map product taxes based on given fiscal position
+        :param fiscal_position: account.fiscal.position recordset
+        :param inv_type: string
+        :return: account.tax recordset
+        """
+        product = self.mapped("product_id")
+        product.ensure_one()
+        if inv_type in ("out_invoice", "out_refund"):
+            taxes = product.taxes_id
+        else:
+            taxes = product.supplier_taxes_id
+        company_id = self.env.context.get("force_company", self.env.company.id)
+        my_taxes = taxes.filtered(lambda r: r.company_id.id == company_id)
+        return fiscal_position.map_tax(my_taxes)
+
+    def _get_account(self, fiscal_position, account):
+        """
+        Map the given account with given fiscal position
+        :param fiscal_position: account.fiscal.position recordset
+        :param account: account.account recordset
+        :return: account.account recordset
+        """
+        return fiscal_position.map_account(account)
+
+    def _get_partner_order_ref(self):
+        """
+        Gets partner order reference
+        :return: string
+        """
+        count = 0
+        if self.sale_line_id:
+            order_id = self.sale_line_id.order_id
+            for line in order_id.order_line:
+                count += 1
+                if line == self.sale_line_id:
+                    return f"{order_id.client_order_ref or order_id.name}-{str(count)}"
+
+        elif self.purchase_line_id:
+            purchase_id = self.purchase_line_id.order_id
+            for line in purchase_id.order_line:
+                count += 1
+                if line == self.purchase_line_id:
+                    return f"{purchase_id.name}-{str(count)}"
+
+        else:
+            return self.picking_id.name
+
+    def _get_picking_ref(self):
+        """
+        Gets picking reference
+        :return: string
+        """
+        return self.picking_id.document_number or self.picking_id.name
+
+    def _get_price_unit_invoice(self):
         """
         Gets price unit for invoice
-        :param inv_type: str
-        :param partner: res.partner
-        :param qty: float
         :return: float
         """
 
-        if inv_type in ("in_invoice", "in_refund"):
-            price_unit = min(self.mapped("price_unit"))
-        else:
-            price_unit = max(self.mapped("price_unit"))
-
-        if price_unit > 0.0:
-            # Value informed by user should has preferency
-            return price_unit
-
         product = self.mapped("product_id")
         product.ensure_one()
-        sum(self.mapped("product_uom_qty"))
-        product_uom = self.mapped("product_uom")
-        company = fields.first(self).picking_id.company_id
-        # Only in the cases the stock.move has linked to Sale or
-        # Purchase Order it's possible use different Currencys
-        # TODO: Should this module make possible by include field
-        #  currency_id in Stock.picking?
-        currency = company.currency_id
-        pickings = self.mapped("picking_id")
-        date_done = min(pickings.mapped("date_done"))
 
-        if inv_type in ("in_invoice", "in_refund"):
-
-            seller = product._select_seller(
-                partner_id=partner, quantity=qty, date=date_done
-            )
-            if not seller:
-                po_line_uom = self.mapped("product_uom") or product.uom_po_id
-                price_unit = self.env["account.tax"]._fix_tax_included_price_company(
-                    product.uom_id._compute_price(product.standard_price, po_line_uom),
-                    product.supplier_taxes_id,
-                    # TODO: Should inform taxes_ids in stock.move?
-                    product.supplier_taxes_id,
-                    fields.first(self).company_id,
-                )
-                price_unit = product.currency_id._convert(
-                    price_unit, currency, company, date_done, False
-                )
-                result = float_round(
-                    price_unit,
-                    precision_digits=max(
-                        currency.decimal_places,
-                        self.env["decimal.precision"].precision_get("Product Price"),
-                    ),
-                )
-            else:
-                price_unit = self.env["account.tax"]._fix_tax_included_price_company(
-                    seller.price,
-                    product.supplier_taxes_id,
-                    # TODO: Should inform taxes_ids in stock.move?
-                    product.supplier_taxes_id,
-                    fields.first(self).company_id,
-                )
-                price_unit = seller.currency_id._convert(
-                    price_unit, currency, company, date_done, False
-                )
-                price_unit = float_round(
-                    price_unit,
-                    precision_digits=max(
-                        currency.decimal_places,
-                        self.env["decimal.precision"].precision_get("Product Price"),
-                    ),
-                )
-                result = seller.product_uom._compute_price(price_unit, product_uom)
-
+        if self.sale_line_id:
+            return self.sale_line_id.price_unit
+        if self.purchase_line_id:
+            return self.purchase_line_id.price_unit
         else:
-            # If partner given, search price in its sale pricelist
-            fiscal_position = (
-                self.env["account.fiscal.position"]
-                .with_company(company)
-                ._get_fiscal_position(partner)
-            )
-
-            if partner and partner.property_product_pricelist:
-                price_unit = None
-                pricelist_rule_id = (
-                    partner.property_product_pricelist._get_product_rule(
-                        product,
-                        qty or 1.0,
-                        uom=product_uom,
-                        date=date_done,
-                    )
-                )
-                pricelist_rule = self.env["product.pricelist.item"].browse(
-                    pricelist_rule_id
-                )
-                price_unit = pricelist_rule._compute_price(
-                    product,
-                    qty,
-                    product_uom,
-                    date_done,
-                    currency=currency,
-                )
-
-            else:
-                price_unit = product.lst_price
-
-            result = product._get_tax_included_unit_price(
-                company,
-                currency,
-                date_done,
-                "sale",
-                fiscal_position=fiscal_position,
-                product_price_unit=price_unit,
-                product_currency=currency,
-            )
-
-        return result
+            return 0.0
 
     def _prepare_extra_move_vals(self, qty):
         """Copy invoice state for a new extra stock move"""

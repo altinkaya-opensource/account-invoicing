@@ -12,6 +12,7 @@
         "account",
         "stock_picking_invoice_link",
         "base_view_inheritance_extension",
+        "l10n_tr_account_einvoice_base",
     ],
     "data": [
         "security/ir.model.access.csv",

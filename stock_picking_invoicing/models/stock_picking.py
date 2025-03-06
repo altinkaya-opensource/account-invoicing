@@ -34,8 +34,7 @@ class StockPicking(models.Model):
 
     def _get_partner_to_invoice(self):
         self.ensure_one()
-        partner = self.partner_id
-        return partner.address_get(["invoice"]).get("invoice")
+        return self.sale_id.partner_invoice_id
 
     def action_assign(self):
         """If any stock move is to be invoiced, picking status is updated"""
@@ -48,3 +47,10 @@ class StockPicking(models.Model):
         for record in self:
             record._update_invoice_state(record.invoice_state)
             record.mapped("move_ids")._update_invoice_state(record.invoice_state)
+
+    def button_validate(self):
+        for picking in self.filtered(
+            lambda p: p.picking_type_id.code not in ["internal", "mrp_operation"]
+        ):
+            picking.set_to_be_invoiced()
+        return super().button_validate()
