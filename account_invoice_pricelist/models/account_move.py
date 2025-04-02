@@ -35,15 +35,16 @@ class AccountMove(models.Model):
     #     ):
     #         raise UserError(_("Pricelist and Invoice need to use the same currency."))
 
-    # @api.depends("partner_id", "company_id")
-    # def _compute_pricelist_id(self):
-    #     for invoice in self:
-    #         if (
-    #             invoice.partner_id
-    #             and invoice.is_sale_document()
-    #             and invoice.partner_id.property_product_pricelist
-    #         ):
-    #             invoice.pricelist_id = invoice.partner_id.property_product_pricelist
+    @api.depends("partner_id", "company_id")
+    def _compute_pricelist_id(self):
+        for invoice in self:
+            if (
+                invoice.partner_id
+                and invoice.is_sale_document()
+                and invoice.partner_id.property_product_pricelist
+                and not invoice.pricelist_id
+            ):
+                invoice.pricelist_id = invoice.partner_id.property_product_pricelist
 
     @api.depends("pricelist_id")
     def _compute_currency_id(self):
