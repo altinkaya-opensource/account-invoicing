@@ -535,6 +535,7 @@ class StockInvoiceOnshipping(models.TransientModel):
             quantity += qty
             move_line_ids.append((4, move.id))
         price = moves._get_price_unit_invoice()
+
         line_obj = self.env["account.move.line"]
         values = line_obj.default_get(line_obj.fields_get().keys())
         values.update(
@@ -545,6 +546,7 @@ class StockInvoiceOnshipping(models.TransientModel):
                 "price_unit": price,
                 "move_line_ids": move_line_ids,
                 "move_id": invoice.id,
+                "discount": moves.sale_line_id.discount,
             }
         )
         values = self._simulate_invoice_line_onchange(values, price_unit=price)
