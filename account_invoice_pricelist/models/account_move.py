@@ -20,30 +20,30 @@ class AccountMove(models.Model):
         copy=True,
     )
 
-    @api.constrains("pricelist_id", "currency_id")
-    def _check_currency(self):
-        if (
-            not config["test_enable"]
-            or (
-                config["test_enable"]
-                and self._context.get("force_check_currecy", False)
-            )
-        ) and self.filtered(
-            lambda a: a.pricelist_id
-            and a.is_sale_document()
-            and a.pricelist_id.currency_id != a.currency_id
-        ):
-            raise UserError(_("Pricelist and Invoice need to use the same currency."))
+    # @api.constrains("pricelist_id", "currency_id")
+    # def _check_currency(self):
+    #     if (
+    #         not config["test_enable"]
+    #         or (
+    #             config["test_enable"]
+    #             and self._context.get("force_check_currecy", False)
+    #         )
+    #     ) and self.filtered(
+    #         lambda a: a.pricelist_id
+    #         and a.is_sale_document()
+    #         and a.pricelist_id.currency_id != a.currency_id
+    #     ):
+    #         raise UserError(_("Pricelist and Invoice need to use the same currency."))
 
-    @api.depends("partner_id", "company_id")
-    def _compute_pricelist_id(self):
-        for invoice in self:
-            if (
-                invoice.partner_id
-                and invoice.is_sale_document()
-                and invoice.partner_id.property_product_pricelist
-            ):
-                invoice.pricelist_id = invoice.partner_id.property_product_pricelist
+    # @api.depends("partner_id", "company_id")
+    # def _compute_pricelist_id(self):
+    #     for invoice in self:
+    #         if (
+    #             invoice.partner_id
+    #             and invoice.is_sale_document()
+    #             and invoice.partner_id.property_product_pricelist
+    #         ):
+    #             invoice.pricelist_id = invoice.partner_id.property_product_pricelist
 
     @api.depends("pricelist_id")
     def _compute_currency_id(self):
