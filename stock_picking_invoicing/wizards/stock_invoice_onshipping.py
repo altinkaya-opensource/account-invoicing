@@ -418,21 +418,16 @@ class StockInvoiceOnshipping(models.TransientModel):
                 picking.sale_id.payment_term_id.id
                 or partner.property_supplier_payment_term_id.id
             )
-
-        currency = self.env.company.currency_id
+        company = picking.company_id
+        currency = company.currency_id
         if inv_type == "out_invoice":
             currency = (
                 picking.sale_id.pricelist_id.currency_id
                 or partner.property_product_pricelist.currency_id
-                or self.env.company.currency_id
+                or company.currency_id
             )
         elif inv_type == "out_refund":
-            currency = picking.purchase_id.currency_id or self.env.company.currency_id
-
-        if partner:
-            code = picking.picking_type_id.code
-            if partner.property_product_pricelist and code == "outgoing":
-                currency = partner.property_product_pricelist.currency_id
+            currency = picking.purchase_id.currency_id or company.currency_id
         journal = self._get_journal()
         reference = self._get_reference()
         invoice_obj = self.env["account.move"]
