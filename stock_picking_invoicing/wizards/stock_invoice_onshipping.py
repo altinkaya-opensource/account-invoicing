@@ -642,7 +642,7 @@ class StockInvoiceOnshipping(models.TransientModel):
         invoice_lines = invoice.invoice_line_ids
 
         for picking in pickings:
-            moves = picking.mapped("move_lines")
+            moves = picking.mapped("move_ids")
             for move in moves:
                 invoice_line = invoice_lines.filtered(
                     lambda line: line.product_id == move.product_id
