@@ -582,7 +582,7 @@ class StockInvoiceOnshipping(models.TransientModel):
         line_obj = self.env["account.move.line"]
         product = move.product_id
         categ = product.categ_id
-        taxes = move._get_taxes(invoice.fiscal_position_id, invoice.type)
+        taxes = move._get_taxes(invoice.fiscal_position_id, invoice.move_type)
         partner_order_ref = move._get_partner_order_ref()
         moves_picking_ref = move._get_picking_ref()
         purchase_line = move.purchase_line_id
