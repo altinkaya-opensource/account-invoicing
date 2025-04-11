@@ -35,7 +35,7 @@
                         name="action_account_change_currency"
                         class="btn-link"
                         states="draft"
-                        groups="account.group_account_manager"
+                        groups="account.group_account_user"
                     >
                         <i
                             title="Update Currency: Will convert the amount lines to the new currency set"
