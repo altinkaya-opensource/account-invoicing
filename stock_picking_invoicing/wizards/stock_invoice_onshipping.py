@@ -608,7 +608,7 @@ class StockInvoiceOnshipping(models.TransientModel):
                 "partner_order_ref": partner_order_ref,
                 "moves_picking_ref": moves_picking_ref,
                 "price_unit": price,
-                "purchase_line_ids": [(6, 0, purchase_line.ids)],
+                "purchase_line_id": purchase_line.id,
                 "invoice_line_tax_ids": [(6, 0, taxes.ids)],
                 "move_line_ids": [(4, move.id)],
                 "invoice_id": invoice.id,
