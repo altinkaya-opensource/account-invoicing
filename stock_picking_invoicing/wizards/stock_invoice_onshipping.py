@@ -602,7 +602,7 @@ class StockInvoiceOnshipping(models.TransientModel):
                 "name": move.name,
                 "account_id": account.id,
                 "product_id": product.id,
-                "uom_id": product.uom_id.id,
+                "product_uom_id": product.uom_id.id,
                 "lot_ids": [(4, lot.id) for lot in move.move_line_ids.mapped("lot_id")],
                 "quantity": move.product_uom_qty,
                 "partner_order_ref": partner_order_ref,
