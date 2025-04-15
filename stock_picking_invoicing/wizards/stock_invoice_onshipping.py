@@ -609,9 +609,9 @@ class StockInvoiceOnshipping(models.TransientModel):
                 "moves_picking_ref": moves_picking_ref,
                 "price_unit": price,
                 "purchase_line_id": purchase_line.id,
-                "invoice_line_tax_ids": [(6, 0, taxes.ids)],
+                "tax_ids": [(6, 0, taxes.ids)],
                 "move_line_ids": [(4, move.id)],
-                "invoice_id": invoice.id,
+                "move_id": invoice.id,
             }
         )
         values = self._simulate_invoice_line_onchange(values, price_unit=price)
