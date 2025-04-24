@@ -314,8 +314,6 @@ class StockInvoiceOnshipping(models.TransientModel):
             pick_obj = self.env["stock.picking"]
             picking = pick_obj.browse(active_ids)
 
-        picking = self.env["stock.picking"].browse(active_ids)
-
         inv_type = (
             INVOICE_TYPE_MAP.get(
                 (
