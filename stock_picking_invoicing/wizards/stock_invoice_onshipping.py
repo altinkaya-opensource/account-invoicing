@@ -437,6 +437,7 @@ class StockInvoiceOnshipping(models.TransientModel):
                 "delivery_ref_no": picking.carrier_tracking_ref or False,
                 "carrier_id": picking.carrier_id.id,
                 "invoice_incoterm_id": picking.sale_id.incoterm.id,
+                "destination_port": picking.sale_id.destination_port,
                 "comment_einvoice": picking.note,
                 "pricelist_id": picking.sale_id.pricelist_id.id or False,
                 "address_contact_id": partner_shipping_id,
