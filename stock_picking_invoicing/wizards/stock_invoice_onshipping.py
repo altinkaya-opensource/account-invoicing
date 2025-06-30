@@ -684,6 +684,14 @@ class StockInvoiceOnshipping(models.TransientModel):
         company = pickings.mapped("company_id")
         if company and company != self.env.company:
             raise UserError(_("All pickings are not related to your company!"))
+
+        if pickings and pickings.filtered(lambda p: not p.carrier_id):
+            raise UserError(
+                _(
+                    "You must set a carrier on the pickings before creating an invoice."
+                )
+            )
+
         pick_list = self._group_pickings(pickings)
         invoices = self.env["account.move"].browse()
         for pickings in pick_list:
