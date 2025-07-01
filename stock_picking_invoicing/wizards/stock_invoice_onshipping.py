@@ -535,7 +535,7 @@ class StockInvoiceOnshipping(models.TransientModel):
         values = line_obj.default_get(line_obj.fields_get().keys())
         values.update(
             {
-                "name": move.name,
+                "name": move.sale_line_id.name,
                 "product_id": product.id,
                 "quantity": quantity,
                 "price_unit": price,
@@ -599,7 +599,7 @@ class StockInvoiceOnshipping(models.TransientModel):
         values = line_obj.default_get(line_obj.fields_get().keys())
         values.update(
             {
-                "name": move.name,
+                "name": move.purchase_line_idname,
                 "account_id": account.id,
                 "product_id": product.id,
                 "product_uom_id": product.uom_id.id,
@@ -615,7 +615,6 @@ class StockInvoiceOnshipping(models.TransientModel):
             }
         )
         values = self._simulate_invoice_line_onchange(values, price_unit=price)
-        values.update({"name": move.name})
         return values
 
     def _action_connect_supplier_einvoice(self):
