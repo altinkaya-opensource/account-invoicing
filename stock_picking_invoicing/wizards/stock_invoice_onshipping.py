@@ -599,7 +599,7 @@ class StockInvoiceOnshipping(models.TransientModel):
         values = line_obj.default_get(line_obj.fields_get().keys())
         values.update(
             {
-                "name": move.purchase_line_idname,
+                "name": move.purchase_line_id.name,
                 "account_id": account.id,
                 "product_id": product.id,
                 "product_uom_id": product.uom_id.id,
