@@ -44,7 +44,6 @@
                         class="btn-danger"
                         string="Ignore Exceptions"
                         help="Click here to be able to post this entry regardless of the exceptions."
-                        groups="base_exception.group_exception_rule_manager"
                     />
                 </div>
             </sheet>
