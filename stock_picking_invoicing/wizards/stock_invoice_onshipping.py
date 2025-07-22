@@ -696,7 +696,7 @@ class StockInvoiceOnshipping(models.TransientModel):
         for pickings in pick_list:
             if True in pickings.mapped("sale_id.create_ewaybill_within_invoice"):
                 pickings.filtered(
-                    lambda p: p.ewaybill_id == False
+                    lambda p: not p.ewaybill_id
                     and p.sale_id.create_ewaybill_within_invoice
                 )._create_ewaybill_before_invoice(ewaybill_date=self.invoice_date)
             moves = pickings.mapped("move_ids")
