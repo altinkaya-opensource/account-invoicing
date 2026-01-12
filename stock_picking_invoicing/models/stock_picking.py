@@ -2,6 +2,7 @@
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl.html).
 
 from odoo import api, models
+from datetime import datetime
 
 
 class StockPicking(models.Model):
@@ -54,3 +55,23 @@ class StockPicking(models.Model):
         ):
             picking.set_to_be_invoiced()
         return super().button_validate()
+
+    def button_create_fast_invoice(self):
+        """
+        Quick create invoice for this picking. Skip quick create wizard
+        if the picking is created from a purchase order.
+        """
+        self.ensure_one()
+        if self.sale_id:
+            self = self.with_context(active_id=self.id, active_ids=[self.id])
+            wizard = self.env["stock.invoice.onshipping"].create(
+                {
+                    "invoice_date": datetime.today().date(),
+                    "sale_journal": 1,
+                }
+            )
+            return wizard.action_generate()
+        else:
+            return self.env.ref(
+                "stock_picking_invoicing.action_stock_invoice_onshipping"
+            ).read()[0]

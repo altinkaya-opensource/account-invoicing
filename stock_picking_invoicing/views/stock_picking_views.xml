@@ -51,11 +51,19 @@
                 </page>
             </notebook>
             <button name="do_unreserve" position="after">
-                <button
+                <!-- <button
                     name="%(action_stock_invoice_onshipping)d"
                     string="Create Invoice"
-                    attrs="{'invisible': ['|', ('state', '!=', 'done'), ('invoice_state', '!=', '2binvoiced')]}"
+                    attrs="{'invisible': ['|', '|', ('state', '!=', 'done'), ('invoice_state', '!=', '2binvoiced'), ('sale_id', '!=', False)]}"
                     type="action"
+                    class="oe_highlight"
+                    groups="base.group_user"
+                /> -->
+                <button
+                    name="button_create_fast_invoice"
+                    string="Hızlı Fatura Oluştur"
+                    attrs="{'invisible': ['|', ('state', '!=', 'done'), ('invoice_state', '!=', '2binvoiced')]}"
+                    type="object"
                     class="oe_highlight"
                     groups="base.group_user"
                 />
