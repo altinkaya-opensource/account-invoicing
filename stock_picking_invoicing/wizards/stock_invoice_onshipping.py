@@ -1,7 +1,7 @@
 # Copyright (C) 2019-Today: Odoo Community Association (OCA)
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl.html).
 
-from odoo import _, api, fields, models
+from odoo import Command, _, api, fields, models
 from odoo.exceptions import UserError
 
 JOURNAL_TYPE_MAP = {
@@ -686,9 +686,7 @@ class StockInvoiceOnshipping(models.TransientModel):
 
         if pickings and pickings.filtered(lambda p: not p.carrier_id):
             raise UserError(
-                _(
-                    "You must set a carrier on the pickings before creating an invoice."
-                )
+                _("You must set a carrier on the pickings before creating an invoice.")
             )
 
         pick_list = self._group_pickings(pickings)
@@ -726,6 +724,11 @@ class StockInvoiceOnshipping(models.TransientModel):
                     invoice._compute_amount()
                     for move in moves_list:
                         if move.sale_line_id:
-                            move.sale_line_id.invoice_lines = move.invoice_line_ids
+                            invoice_lines = (
+                                move.sale_line_id.invoice_lines | move.invoice_line_ids
+                            )
+                            move.sale_line_id.write(
+                                {"invoice_lines": [(Command.set(invoice_lines.ids))]}
+                            )
                     invoices |= invoice
         return invoices
