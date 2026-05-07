@@ -1,5 +1,5 @@
 # Do NOT update manually; changes here will be overwritten by Copier
-_commit: v1.29
+_commit: v1.38
 _src_path: gh:oca/oca-addons-repo-template
 ci: GitHub
 convert_readme_fragments_to_markdown: false
@@ -16,9 +16,7 @@ odoo_test_flavor: Both
 odoo_version: 16.0
 org_name: Odoo Community Association (OCA)
 org_slug: OCA
-rebel_module_groups:
-- account_invoice_triple_discount,account_invoice_supplierinfo_update_triple_discount
-- account_invoice_fixed_discount
+rebel_module_groups: []
 repo_description: 'TODO: add repo description.'
 repo_name: account-invoicing
 repo_slug: account-invoicing

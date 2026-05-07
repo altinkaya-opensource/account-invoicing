@@ -21,11 +21,17 @@ class AccountMove(models.Model):
             billing_lines = bl_obj.search([("move_id", "=", rec.id)])
             rec.billing_ids = billing_lines.mapped("billing_id")
 
+    def _get_billing_type(self):
+        outbound_types = {"out_invoice", "out_refund", "out_receipt"}
+        move_types = set(self.mapped("move_type"))
+        return "out_invoice" if move_types.issubset(outbound_types) else "in_invoice"
+
     def _create_billing(self, partner):
         billing = self.env["account.billing"].create(
             {
                 "partner_id": partner.id,
-                "bill_type": list(set(self.mapped("move_type")))[0],
+                "bill_type": self._get_billing_type(),
+                "currency_id": self.mapped("currency_id")[0].id,
                 "billing_line_ids": [
                     Command.create(
                         {

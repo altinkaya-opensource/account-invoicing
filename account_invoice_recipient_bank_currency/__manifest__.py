@@ -3,11 +3,11 @@
 {
     "name": "Account Invoice Recipient Bank Currency",
     "summary": "Module to fill recipient bank from invoices by using the invoice's currency.",
-    "author": "ForgeFlow S.L, Odoo Community Association (OCA)",
+    "author": "ForgeFlow S.L., Odoo Community Association (OCA)",
     "license": "AGPL-3",
     "website": "https://github.com/OCA/account-invoicing",
     "category": "Accounting",
-    "version": "16.0.1.0.0",
+    "version": "16.0.1.0.1",
     "depends": ["account"],
     "installable": True,
     "application": False,

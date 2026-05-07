@@ -36,6 +36,7 @@ class TestAccountInvoiceRecipientBankCurrency(TransactionCase):
                 "partner_id": cls.partner.id,
                 "currency_id": cls.env.ref("base.USD").id,
                 "sequence": 1,
+                "allow_out_payment": True,
             }
         )
         cls.bank_acc2 = cls.partner_bank_model.create(
@@ -44,6 +45,7 @@ class TestAccountInvoiceRecipientBankCurrency(TransactionCase):
                 "partner_id": cls.partner.id,
                 "currency_id": cls.env.ref("base.EUR").id,
                 "sequence": 2,
+                "allow_out_payment": True,
             }
         )
         cls.bank_acc3 = cls.partner_bank_model.create(
@@ -52,6 +54,7 @@ class TestAccountInvoiceRecipientBankCurrency(TransactionCase):
                 "partner_id": cls.partner.id,
                 "currency_id": cls.env.ref("base.USD").id,
                 "sequence": 3,
+                "allow_out_payment": True,
             }
         )
         cls.bank_acc4 = cls.partner_bank_model.create(
@@ -60,6 +63,7 @@ class TestAccountInvoiceRecipientBankCurrency(TransactionCase):
                 "partner_id": cls.partner.id,
                 "currency_id": cls.env.ref("base.EUR").id,
                 "sequence": 4,
+                "allow_out_payment": True,
             }
         )
 
@@ -105,6 +109,9 @@ class TestAccountInvoiceRecipientBankCurrency(TransactionCase):
         self.assertEqual(invoice_EUR.partner_bank_id, self.bank_acc4)
         self.assertEqual(invoice_DKK.partner_bank_id, self.bank_acc1)
 
+        # some modules change the relation to a restrict, so empty the value before unlink
+        invoice_DKK.partner_bank_id = False
+        invoice_USD.partner_bank_id = False
         self.bank_acc1.unlink()
         self.bank_acc3.unlink()
         invoice_USD._compute_partner_bank_id()

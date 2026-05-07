@@ -4,14 +4,14 @@
         <field name="model">account.move</field>
         <field name="inherit_id" ref="account.view_move_form" />
         <field name="arch" type="xml">
-            <xpath expr="//button[@name='action_post']" position="after">
+            <xpath expr="//button[@name='button_draft']" position="after">
                 <button
                     name="check_supplierinfo"
                     string="Check Supplier Infos"
                     help="Check if the invoice information are similar from the supplier information"
                     class="oe_highlight"
                     type="object"
-                    attrs="{'invisible': ['|', ('supplierinfo_ok', '=', True), ('partner_id', '=', False)]}"
+                    attrs="{'invisible': ['|', '|', ('supplierinfo_ok', '=', True), ('partner_id', '=', False), ('move_type', 'not in', ['in_invoice', 'in_refund'])]}"
                 />
             </xpath>
             <field name="to_check" position="before">

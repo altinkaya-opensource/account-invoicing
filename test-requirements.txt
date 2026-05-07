@@ -1,0 +1,5 @@
+# google-cloud-documentai depends on google-auth, which depends on cryptography.
+# odoo relies on pyopenssl==20.0.1 which uses internal cryptography bindings
+# (X509_V_FLAG_CB_ISSUER_CHECK, X509_V_FLAG_NOTIFY_POLICY) removed in 37.0.0.
+cryptography<37
+freezegun
