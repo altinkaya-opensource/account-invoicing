@@ -756,3 +756,60 @@ class TestPickingInvoicing(TestPickingInvoicingCommon):
             line.quantity_done = 10
 
         picking.button_validate()
+
+    def test_cancelled_move_is_not_invoiced(self):
+        """Do not invoice the unshipped remainder after declining a backorder."""
+        self.partner.write({"type": "invoice"})
+        picking = self.picking_model.create(
+            {
+                "partner_id": self.partner.id,
+                "picking_type_id": self.pick_type_out.id,
+                "location_id": self.stock_location.id,
+                "location_dest_id": self.customers_location.id,
+                "carrier_id": self.env.ref("delivery.free_delivery_carrier").id,
+            }
+        )
+        move_vals = {
+            "product_id": self.product_test_1.id,
+            "picking_id": picking.id,
+            "location_dest_id": self.customers_location.id,
+            "location_id": self.stock_location.id,
+            "name": self.product_test_1.name,
+            "product_uom_qty": 10,
+            "product_uom": self.product_test_1.uom_id.id,
+        }
+        new_move = self.move_model.create(move_vals)
+        new_move._onchange_product_id()
+        picking.action_confirm()
+        picking.action_assign()
+        new_move.quantity_done = 6
+
+        action = picking.button_validate()
+        self.assertEqual(action["res_model"], "stock.backorder.confirmation")
+        wizard = (
+            self.env["stock.backorder.confirmation"]
+            .with_context(**action["context"])
+            .create({"pick_ids": [(4, picking.id)]})
+        )
+        wizard.process_cancel_backorder()
+
+        self.assertEqual(picking.state, "done")
+        cancelled_move = picking.move_ids.filtered(lambda m: m.state == "cancel")
+        self.assertEqual(len(cancelled_move), 1)
+        self.assertEqual(cancelled_move.product_uom_qty, 4)
+        self.assertEqual(cancelled_move.quantity_done, 0)
+        self.assertEqual(cancelled_move.invoice_state, "none")
+
+        # Put the stamp back by hand. Every move cancelled before this fix
+        # landed still carries "2binvoiced", so the invoicing filter has to
+        # refuse it on its own, without help from the cancel hook above.
+        cancelled_move.invoice_state = "2binvoiced"
+
+        invoice = self.create_invoice_wizard(picking)
+        self.assertNotIn(
+            cancelled_move, invoice.invoice_line_ids.mapped("move_line_ids")
+        )
+        product_lines = invoice.invoice_line_ids.filtered(
+            lambda line: line.product_id == self.product_test_1
+        )
+        self.assertEqual(sum(product_lines.mapped("quantity")), 6)

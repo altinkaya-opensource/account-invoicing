@@ -475,7 +475,13 @@ class StockInvoiceOnshipping(models.TransientModel):
         :return: list of stock.move recordset
         """
         grouped_moves = {}
-        moves = moves.filtered(lambda m: m.invoice_state == "2binvoiced")
+        # Only a done move may be invoiced. A move cancelled while the transfer
+        # was validated (the "No Backorder" answer) keeps the 2binvoiced stamp
+        # that button_validate put on it, and billing it would charge the
+        # customer for goods that never shipped.
+        moves = moves.filtered(
+            lambda m: m.state == "done" and m.invoice_state == "2binvoiced"
+        )
         for move in moves:
             key = self._get_move_key(move)
             move_grouped = grouped_moves.get(key, self.env["stock.move"].browse())
