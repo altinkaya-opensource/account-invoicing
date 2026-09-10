@@ -24,7 +24,11 @@ class StockPicking(models.Model):
         Button to set Invoice State to Invoiced.
         """
         self._set_as_invoiced()
-        self.mapped("move_ids")._set_as_invoiced()
+        # A cancelled move was never invoiced. Stamping it would claim on the
+        # picking form that a line which shipped nothing had been billed.
+        self.mapped("move_ids").filtered(
+            lambda m: m.state != "cancel"
+        )._set_as_invoiced()
 
     def set_as_not_billable(self):
         """

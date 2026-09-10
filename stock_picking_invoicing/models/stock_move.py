@@ -95,3 +95,15 @@ class StockMove(models.Model):
         values = super()._prepare_move_split_vals(uom_qty)
         values["invoice_state"] = self.invoice_state
         return values
+
+    def _action_cancel(self):
+        """A cancelled move has nothing left to invoice.
+
+        ``stock.picking.button_validate`` stamps every move ``2binvoiced``
+        before the transfer runs, and ``_prepare_move_split_vals`` copies that
+        stamp onto the remainder move that a "No Backorder" answer then
+        cancels. Left alone, that move keeps asking to be invoiced.
+        """
+        res = super()._action_cancel()
+        self.filtered(lambda m: m.invoice_state == "2binvoiced")._set_as_not_billable()
+        return res
