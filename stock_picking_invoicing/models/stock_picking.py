@@ -1,8 +1,9 @@
 # Copyright (C) 2019-Today: Odoo Community Association (OCA)
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl.html).
 
-from odoo import api, models
 from datetime import datetime
+
+from odoo import api, models
 
 
 class StockPicking(models.Model):

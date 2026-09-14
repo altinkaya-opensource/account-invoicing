@@ -12,14 +12,18 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
-from odoo import models, fields, api
+from odoo import fields, models
 
 
 class AccountInvoiceLine(models.Model):
-    _inherit = 'account.invoice.line'
+    _inherit = "account.invoice.line"
 
-    lot_ids = fields.Many2many('stock.lot', relation='account_move_line_stock_lot_rel',
-                               column1='invoice_line_id', column2='lot_id',
-                               string='Lots/Serial Numbers')
-    moves_picking_ref = fields.Char(string='Picking Ref')
-    partner_order_ref = fields.Char(string='Order Reference')
+    lot_ids = fields.Many2many(
+        "stock.lot",
+        relation="account_move_line_stock_lot_rel",
+        column1="invoice_line_id",
+        column2="lot_id",
+        string="Lots/Serial Numbers",
+    )
+    moves_picking_ref = fields.Char(string="Picking Ref")
+    partner_order_ref = fields.Char(string="Order Reference")

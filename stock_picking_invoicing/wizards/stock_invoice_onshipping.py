@@ -275,7 +275,8 @@ class StockInvoiceOnshipping(models.TransientModel):
             if not pickings:
                 raise UserError(
                     _(
-                        "No picking found! Match the waybill with a picking before creating the invoice."
+                        "No picking found! Match the waybill with a picking "
+                        "before creating the invoice."
                     )
                 )
             pickings = pickings.filtered(lambda p: p.invoice_state == "2binvoiced")
@@ -516,7 +517,7 @@ class StockInvoiceOnshipping(models.TransientModel):
         """
         move = fields.first(moves)
         product = move.product_id
-        partner_id = self.env["res.partner"].browse(invoice_values["partner_id"])
+        self.env["res.partner"].browse(invoice_values["partner_id"])
         inv_type = invoice_values["move_type"]
         quantity = 0
         move_line_ids = []

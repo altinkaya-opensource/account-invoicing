@@ -1,8 +1,7 @@
 # Copyright (C) 2019-Today: Odoo Community Association (OCA)
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl.html).
 
-from odoo import fields, models
-from odoo.tools.float_utils import float_round
+from odoo import models
 
 
 class StockMove(models.Model):
