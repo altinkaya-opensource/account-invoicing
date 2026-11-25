@@ -122,4 +122,18 @@
             </button>
         </field>
     </record>
+    <!-- Receipts with a supplier move no vendor bill line is linked to yet. -->
+    <record id="action_unbilled_receipts" model="ir.actions.act_window">
+        <field name="name">Incoming Shipments</field>
+        <field name="res_model">stock.picking</field>
+        <field name="view_mode">tree,form</field>
+        <field name="domain">[('unbilled_receipt', '=', True)]</field>
+    </record>
+    <menuitem
+        id="menu_unbilled_receipts"
+        name="Incoming Shipments"
+        parent="account.menu_finance_payables"
+        action="action_unbilled_receipts"
+        sequence="50"
+    />
 </odoo>

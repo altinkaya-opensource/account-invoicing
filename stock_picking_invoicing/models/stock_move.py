@@ -12,6 +12,25 @@ class StockMove(models.Model):
         "stock.invoice.state.mixin",
     ]
 
+    def _unbilled_supplier_receipts(self):
+        """The received supplier moves no live bill line is linked to."""
+        return self.filtered(
+            lambda move: move.state == "done"
+            and move.location_id.usage == "supplier"
+            and not move.invoice_line_ids.filtered(
+                lambda line: line.parent_state != "cancel"
+            )
+        )
+
+    def _received_quantity(self, uom):
+        """The done quantity of the moves, in ``uom``."""
+        return sum(
+            move.product_uom._compute_quantity(
+                move.quantity_done, uom, raise_if_failure=False
+            )
+            for move in self
+        )
+
     def _get_taxes(self, fiscal_position, inv_type):
         """
         Map product taxes based on given fiscal position
