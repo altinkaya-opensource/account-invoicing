@@ -467,56 +467,56 @@ msgstr ""
 
 #. module: stock_picking_invoicing
 #. odoo-python
-#: code:addons/stock_picking_invoicing/models/account_move.py
+#: code:addons/stock_picking_invoicing/models/account_move.py:0
 #, python-format
 msgid "Receipts are linked to a vendor bill that is not cancelled."
 msgstr ""
 
 #. module: stock_picking_invoicing
 #. odoo-python
-#: code:addons/stock_picking_invoicing/models/account_move.py
+#: code:addons/stock_picking_invoicing/models/account_move.py:0
 #, python-format
 msgid "Receipts are linked to product lines of the bill %s."
 msgstr ""
 
 #. module: stock_picking_invoicing
 #. odoo-python
-#: code:addons/stock_picking_invoicing/models/account_move.py
+#: code:addons/stock_picking_invoicing/models/account_move.py:0
 #, python-format
 msgid "Only received supplier moves without a bill can be linked: %s"
 msgstr ""
 
 #. module: stock_picking_invoicing
 #. odoo-python
-#: code:addons/stock_picking_invoicing/models/account_move.py
+#: code:addons/stock_picking_invoicing/models/account_move.py:0
 #, python-format
 msgid "The receipts %(receipts)s are not from %(supplier)s."
 msgstr ""
 
 #. module: stock_picking_invoicing
 #. odoo-python
-#: code:addons/stock_picking_invoicing/models/account_move.py
+#: code:addons/stock_picking_invoicing/models/account_move.py:0
 #, python-format
 msgid "The bill lines are for %(billed)s, the receipt for %(received)s."
 msgstr ""
 
 #. module: stock_picking_invoicing
 #. odoo-python
-#: code:addons/stock_picking_invoicing/wizards/stock_invoice_onshipping.py
+#: code:addons/stock_picking_invoicing/wizards/stock_invoice_onshipping.py:0
 #, python-format
 msgid "%(product)s: received %(received)s, billed %(billed)s"
 msgstr ""
 
 #. module: stock_picking_invoicing
 #. odoo-python
-#: code:addons/stock_picking_invoicing/wizards/stock_invoice_onshipping.py
+#: code:addons/stock_picking_invoicing/wizards/stock_invoice_onshipping.py:0
 #, python-format
 msgid "No receipt line equals a line of this bill."
 msgstr ""
 
 #. module: stock_picking_invoicing
 #. odoo-python
-#: code:addons/stock_picking_invoicing/wizards/stock_invoice_onshipping.py
+#: code:addons/stock_picking_invoicing/wizards/stock_invoice_onshipping.py:0
 #, python-format
 msgid "Receipt lines that were not linked to this bill:"
 msgstr ""
@@ -533,7 +533,7 @@ msgstr ""
 
 #. module: stock_picking_invoicing
 #. odoo-python
-#: code:addons/stock_picking_invoicing/models/stock_picking.py
+#: code:addons/stock_picking_invoicing/models/stock_picking.py:0
 #, python-format
 msgid "Search the unbilled receipts with = or != a boolean."
 msgstr ""
