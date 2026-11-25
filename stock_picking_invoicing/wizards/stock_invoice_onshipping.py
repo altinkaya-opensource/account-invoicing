@@ -3,6 +3,7 @@
 
 from odoo import Command, _, api, fields, models
 from odoo.exceptions import UserError
+from odoo.tools import plaintext2html
 
 JOURNAL_TYPE_MAP = {
     ("outgoing", "customer"): ["sale"],
@@ -104,7 +105,7 @@ class StockInvoiceOnshipping(models.TransientModel):
         result.update({"invoice_date": fields.Date.today()})
         pickings = self._load_pickings()
         if pickings and "customer" not in pickings.mapped("location_dest_id.usage"):
-            partner_id = pickings.mapped("partner_id")
+            partner_id = pickings.mapped("partner_id.commercial_partner_id")
             if len(partner_id) > 1:
                 raise UserError(_("You can only invoice one partner"))
             result.update({"partner_id": partner_id.id})
@@ -226,15 +227,19 @@ class StockInvoiceOnshipping(models.TransientModel):
         :return:
         """
         self.ensure_one()
-        if self.connect_to_einvoice and self.journal_type == "purchase":
+        connect = self.connect_to_einvoice and self.journal_type == "purchase"
+        if connect:
             invoices = self._action_connect_supplier_einvoice()
         else:
             invoices = self._action_generate_invoices()
         if not invoices:
             raise UserError(_("No invoice created!"))
 
-        # Update the state on pickings related to new invoices only
-        self._update_picking_invoice_status(invoices.mapped("picking_ids"))
+        # Update the state on pickings related to new invoices only. Linking
+        # to an existing bill has set it per move: a receipt may be linked
+        # only in part.
+        if not connect:
+            self._update_picking_invoice_status(invoices.mapped("picking_ids"))
 
         inv_type = self._get_invoice_type()
         if inv_type in ["out_invoice", "out_refund"]:
@@ -577,58 +582,14 @@ class StockInvoiceOnshipping(models.TransientModel):
         """
         return self.env["account.move"].create(invoice_values)
 
-    def _prepare_purchase_invoice_line(self, picking, move, invoice):
-        """
-        Prepare invoice line
-        :param picking: stock.picking recordset
-        :param move: stock.move recordset
-        :param invoice: account.invoice recordset
-        :return: values: dict
-        """
-        line_obj = self.env["account.move.line"]
-        product = move.product_id
-        categ = product.categ_id
-        taxes = move._get_taxes(invoice.fiscal_position_id, invoice.move_type)
-        partner_order_ref = move._get_partner_order_ref()
-        moves_picking_ref = move._get_picking_ref()
-        purchase_line = move.purchase_line_id
-        if invoice.move_type in ("out_invoice", "out_refund"):
-            account = product.property_account_income_id
-            if not account:
-                account = categ.property_account_income_categ_id
-        else:
-            account = product.property_account_expense_id
-            if not account:
-                account = categ.property_account_expense_categ_id
-        account = move._get_account(invoice.fiscal_position_id, account)
-        price = purchase_line.price_unit
-        values = line_obj.default_get(line_obj.fields_get().keys())
-        values.update(
-            {
-                "name": move.purchase_line_id.name,
-                "account_id": account.id,
-                "product_id": product.id,
-                "product_uom_id": product.uom_id.id,
-                "lot_ids": [(4, lot.id) for lot in move.move_line_ids.mapped("lot_id")],
-                "quantity": move.product_uom_qty,
-                "partner_order_ref": partner_order_ref,
-                "moves_picking_ref": moves_picking_ref,
-                "price_unit": price,
-                "purchase_line_id": purchase_line.id,
-                "tax_ids": [(6, 0, taxes.ids)],
-                "move_line_ids": [(4, move.id)],
-                "move_id": invoice.id,
-            }
-        )
-        values = self._simulate_invoice_line_onchange(values, price_unit=price)
-        return values
-
     def _action_connect_supplier_einvoice(self):
+        """Link the selected receipts to the lines of an existing vendor bill.
+
+        The bill is never changed. A product links when its received quantity
+        equals what the bill still has open for it; the other products are
+        named on the bill's chatter and stay to be invoiced.
+        :return: account.move recordset
         """
-        Connect to supplier einvoice
-        :return: action.invoice recordset
-        """
-        AccountMoveLine = self.env["account.move.line"]
         invoice = self.supplier_invoice_id
         pickings = self._load_pickings()
 
@@ -638,46 +599,31 @@ class StockInvoiceOnshipping(models.TransientModel):
         if not invoice.invoice_line_ids:
             invoice.action_import_lines_from_einvoice_xml()
 
-        # Link pickings with invoice
-        invoice.write(
-            {
-                "picking_ids": [(6, 0, [p.id for p in pickings])],
-            }
+        matches = invoice._match_supplier_receipts(pickings)
+        exact = [match for match in matches if match["exact"]]
+        left = "\n".join(
+            _(
+                "%(product)s: received %(received)s, billed %(billed)s",
+                product=match["product"].display_name,
+                received=match["received"],
+                billed=match["billed"],
+            )
+            for match in matches
+            if not match["exact"]
         )
-        invoice_lines = invoice.invoice_line_ids
-
-        for picking in pickings:
-            moves = picking.mapped("move_ids")
-            for move in moves:
-                invoice_line = invoice_lines.filtered(
-                    lambda line: line.product_id == move.product_id
+        if not exact:
+            raise UserError(
+                _("No receipt line equals a line of this bill.") + "\n" + left
+            )
+        invoice._link_supplier_receipts(
+            [(match["lines"], match["moves"]) for match in exact]
+        )
+        if left:
+            invoice.message_post(
+                body=plaintext2html(
+                    _("Receipt lines that were not linked to this bill:") + "\n" + left
                 )
-
-                if not invoice_line:
-                    invoice_line = AccountMoveLine.create(
-                        self._prepare_purchase_invoice_line(picking, move, invoice)
-                    )
-                    invoice.write({"line_ids": [(4, invoice_line.id)]})
-
-                purchase_line = move.purchase_line_id
-                # Link Invoice Lines with Move and Purchase Line
-                invoice_line.write(
-                    {
-                        "purchase_order_id": picking.purchase_id.id,
-                        "purchase_line_id": purchase_line.id,
-                        # this field named wrong. it's related to stock.move,
-                        # not stock.move.line
-                        "move_line_ids": [(4, move.id)],
-                    }
-                )
-
-                # Link Move with Invoice Lines
-                move.write(
-                    {
-                        "invoice_line_ids": [(6, 0, invoice_line.ids)],
-                    }
-                )
-
+            )
         return invoice
 
     def _action_generate_invoices(self):

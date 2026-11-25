@@ -467,3 +467,82 @@ msgstr "Fatura oluşturmadan önce sevklerde bir nakliyeci ayarlamalısınız."
 #: model_terms:ir.ui.view,arch_db:stock_picking_invoicing.view_stock_invoice_onshipping
 msgid "or"
 msgstr "veya"
+
+#. module: stock_picking_invoicing
+#: model:ir.actions.act_window,name:stock_picking_invoicing.action_unbilled_receipts
+#: model:ir.ui.menu,name:stock_picking_invoicing.menu_unbilled_receipts
+msgid "Incoming Shipments"
+msgstr "Gelen Sevkler"
+
+#. module: stock_picking_invoicing
+#. odoo-python
+#: code:addons/stock_picking_invoicing/models/account_move.py:0
+#, python-format
+msgid "Receipts are linked to a vendor bill that is not cancelled."
+msgstr "Sevkler, iptal edilmemiş bir tedarikçi faturasına bağlanır."
+
+#. module: stock_picking_invoicing
+#. odoo-python
+#: code:addons/stock_picking_invoicing/models/account_move.py:0
+#, python-format
+msgid "Receipts are linked to product lines of the bill %s."
+msgstr "Sevkler, %s faturasının ürün satırlarına bağlanır."
+
+#. module: stock_picking_invoicing
+#. odoo-python
+#: code:addons/stock_picking_invoicing/models/account_move.py:0
+#, python-format
+msgid "Only received supplier moves without a bill can be linked: %s"
+msgstr "Yalnızca teslim alınmış ve faturası olmayan tedarikçi hareketleri bağlanabilir: %s"
+
+#. module: stock_picking_invoicing
+#. odoo-python
+#: code:addons/stock_picking_invoicing/models/account_move.py:0
+#, python-format
+msgid "The receipts %(receipts)s are not from %(supplier)s."
+msgstr "%(receipts)s sevkleri %(supplier)s tedarikçisine ait değil."
+
+#. module: stock_picking_invoicing
+#. odoo-python
+#: code:addons/stock_picking_invoicing/models/account_move.py:0
+#, python-format
+msgid "The bill lines are for %(billed)s, the receipt for %(received)s."
+msgstr "Fatura satırları %(billed)s için, sevk ise %(received)s için."
+
+#. module: stock_picking_invoicing
+#. odoo-python
+#: code:addons/stock_picking_invoicing/wizards/stock_invoice_onshipping.py:0
+#, python-format
+msgid "%(product)s: received %(received)s, billed %(billed)s"
+msgstr "%(product)s: teslim alınan %(received)s, faturadaki %(billed)s"
+
+#. module: stock_picking_invoicing
+#. odoo-python
+#: code:addons/stock_picking_invoicing/wizards/stock_invoice_onshipping.py:0
+#, python-format
+msgid "No receipt line equals a line of this bill."
+msgstr "Hiçbir sevk satırı bu faturanın bir satırıyla birebir tutmuyor."
+
+#. module: stock_picking_invoicing
+#. odoo-python
+#: code:addons/stock_picking_invoicing/wizards/stock_invoice_onshipping.py:0
+#, python-format
+msgid "Receipt lines that were not linked to this bill:"
+msgstr "Bu faturaya bağlanmayan sevk satırları:"
+
+#. module: stock_picking_invoicing
+#: model:ir.model.fields,field_description:stock_picking_invoicing.field_stock_picking__unbilled_receipt
+msgid "Unbilled Receipt"
+msgstr "Faturasız Sevk"
+
+#. module: stock_picking_invoicing
+#: model:ir.model.fields,help:stock_picking_invoicing.field_stock_picking__unbilled_receipt
+msgid "A received supplier move of this transfer has no vendor bill line."
+msgstr "Bu transferin teslim alınmış bir tedarikçi hareketinin fatura satırı yok."
+
+#. module: stock_picking_invoicing
+#. odoo-python
+#: code:addons/stock_picking_invoicing/models/stock_picking.py:0
+#, python-format
+msgid "Search the unbilled receipts with = or != a boolean."
+msgstr "Faturasız sevkleri = veya != ile ve bir mantıksal değerle arayın."

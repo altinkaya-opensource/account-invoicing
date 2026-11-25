@@ -1,8 +1,10 @@
 # Copyright (C) 2019-Today: Odoo Community Association (OCA)
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl.html).
 
-from odoo import api, models
 from datetime import datetime
+
+from odoo import _, api, fields, models
+from odoo.exceptions import UserError
 
 
 class StockPicking(models.Model):
@@ -11,6 +13,45 @@ class StockPicking(models.Model):
         _name,
         "stock.invoice.state.mixin",
     ]
+
+    unbilled_receipt = fields.Boolean(
+        compute="_compute_unbilled_receipt",
+        search="_search_unbilled_receipt",
+        help="A received supplier move of this transfer has no vendor bill line.",
+    )
+
+    def _compute_unbilled_receipt(self):
+        for picking in self:
+            picking.unbilled_receipt = bool(
+                picking.move_ids._unbilled_supplier_receipts()
+            )
+
+    def _search_unbilled_receipt(self, operator, value):
+        """The SQL of ``stock.move._unbilled_supplier_receipts``."""
+        if operator not in ("=", "!=") or not isinstance(value, bool):
+            raise UserError(_("Search the unbilled receipts with = or != a boolean."))
+        # The subquery reads tables the domain does not name.
+        self.env["stock.move"].flush_model(
+            ["state", "location_id", "picking_id", "invoice_line_ids"]
+        )
+        self.env["account.move.line"].flush_model(["parent_state"])
+        query = """
+            SELECT move.picking_id
+              FROM stock_move move
+              JOIN stock_location location ON location.id = move.location_id
+             WHERE move.state = 'done'
+               AND location.usage = 'supplier'
+               AND move.picking_id IS NOT NULL
+               AND NOT EXISTS (
+                   SELECT 1
+                     FROM stock_move_invoice_line_rel rel
+                     JOIN account_move_line line ON line.id = rel.invoice_line_id
+                    WHERE rel.move_id = move.id
+                      AND line.parent_state IS DISTINCT FROM 'cancel'
+               )
+        """
+        inselect = "inselect" if (operator == "=") == value else "not inselect"
+        return [("id", inselect, (query, []))]
 
     def set_to_be_invoiced(self):
         """
