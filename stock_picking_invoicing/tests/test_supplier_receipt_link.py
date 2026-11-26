@@ -2,6 +2,8 @@
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl.html).
 """Linking supplier receipts to a vendor bill that already has its lines."""
 
+from ast import literal_eval
+
 from odoo import Command, fields
 from odoo.exceptions import UserError
 from odoo.tests import new_test_user, tagged
@@ -159,6 +161,26 @@ class TestSupplierReceiptLink(TransactionCase):
         # A cancelled bill no longer bills the receipt.
         bill.button_cancel()
         self.assertEqual(self.env["stock.picking"].search(unbilled), picking)
+
+    def test_the_list_keeps_the_purchase_receipts_nobody_set_aside(self):
+        action = self.env.ref("stock_picking_invoicing.action_unbilled_receipts")
+        domain = literal_eval(action.domain)
+
+        def listed(picking):
+            return self.env["stock.picking"].search(
+                domain + [("id", "in", picking.ids)]
+            )
+
+        picking = self._receive([(self.product, 10.0)])
+        self.assertEqual(listed(picking), picking)
+        picking.set_as_not_billable()
+        self.assertFalse(listed(picking))
+        picking.set_to_be_invoiced()
+        self.assertEqual(listed(picking), picking)
+
+        # A receipt no purchase order asked for is not listed.
+        picking.move_ids.purchase_line_id = False
+        self.assertFalse(listed(picking))
 
     def test_wizard_refuses_when_nothing_is_equal(self):
         picking = self._receive([(self.product, 10.0)])
